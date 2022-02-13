@@ -36,7 +36,7 @@ class TasksCommand:
         with open(self.COMPLETED_TASKS_FILE, "w+") as f:
             f.truncate(0)
             for item in self.completed_items:
-                f.write(f"{item}\n")
+                f.write(f"{item.strip()}\n")
 
     def runserver(self):
         address = "127.0.0.1"
@@ -77,27 +77,89 @@ $ python tasks.py runserver # Starts the tasks management server"""
         )
 
     def add(self, args):
-        pass  # Use your existing implementation
+        priority = int(args[0])
+        if priority in self.current_items.keys():
+            new_priority = priority
+            # iterate over all keys until a non existent key is found
+            while new_priority in self.current_items.keys():
+                new_priority += 1
+            self.current_items[new_priority] = self.current_items[priority]
+
+        self.current_items[priority] = args[1]
+        print(f"Added task: \"{args[1]}\" with priority {priority}")
+        self.write_current()
 
     def done(self, args):
-        pass  # Use your existing implementation
+        priority = int(args[0])
+        # validation
+        if(priority not in self.current_items.keys()):
+            print(
+                f"Error: no incomplete item with priority {priority} exists.")
+            return
+
+        self.completed_items.append(f"{self.current_items[priority]}")
+        del self.current_items[priority]
+        print(f"Marked item as done.")
+        self.write_current()
+        self.write_completed()
 
     def delete(self, args):
-        pass  # Use your existing implementation
+        priority = int(args[0])
+        # validation
+        if(priority not in self.current_items.keys()):
+            print(
+                f"Error: item with priority {priority} does not exist. Nothing deleted.")
+            return
+
+        del self.current_items[priority]
+        print(f"Deleted item with priority {priority}")
+        self.write_current()
 
     def ls(self):
-        pass  # Use your existing implementation
+        idx = 1
+        for key in sorted(self.current_items.keys()):
+            print(f"{idx}. {self.current_items[key]} [{key}]")
+            idx += 1
 
     def report(self):
-        pass  # Use your existing implementation
+        print("Pending :", len(self.current_items))
+        idx = 1
+        for key in sorted(self.current_items.keys()):
+            print(f"{idx}. {self.current_items[key]} [{key}]")
+            idx += 1
+        # reset index
+        idx = 1
+
+        print("\nCompleted :", len(self.completed_items))
+        for val in self.completed_items:
+            print(f"{idx}. {val.strip()}")
+            idx += 1
 
     def render_pending_tasks(self):
         # Complete this method to return all incomplete tasks as HTML
-        return "<h1> Show Incomplete Tasks Here </h1>"
+        # function to map items to li tags
+        def to_html_list(data):
+            return f"<li>{data[0]} {data[1]}</li>"
+
+        # load latest data
+        self.read_current()
+
+        heading = "<h1> Incomplete Tasks </h1>"
+        tasks = "".join(list(map(to_html_list, self.current_items.items())))
+        return heading + f"<ul>{tasks}</ul>"
 
     def render_completed_tasks(self):
         # Complete this method to return all completed tasks as HTML
-        return "<h1> Show Completed Tasks Here </h1>"
+        # function to map items to li tags
+        def to_html_list(data):
+            return f"<li>{data}</li>"
+
+        # load latest data
+        self.read_completed()
+
+        heading = "<h1> Completed Tasks </h1>"
+        tasks = "".join(list(map(to_html_list, self.completed_items)))
+        return heading + f"<ul>{tasks}</ul>"
 
 
 class TasksServer(TasksCommand, BaseHTTPRequestHandler):
